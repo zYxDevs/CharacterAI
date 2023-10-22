@@ -14,9 +14,7 @@ class PyAsyncCAI:
     ):
         self.token = token
 
-        if plus: sub = 'plus'
-        else: sub = 'beta'
-
+        sub = 'plus' if plus else 'beta'
         self.session = tls_client.Session(
             client_identifier='chrome112'
         )
@@ -30,22 +28,9 @@ class PyAsyncCAI:
         self.chat = self.chat(token, self.session)
         self.chat2 = self.chat2(token, None, self.session)
 
-    async def request(
-        url: str, session: tls_client.Session,
-        *, token: str = None, method: str = 'GET',
-        data: dict = None, split: bool = False,
-        neo: bool = False
-    ):
-        if neo:
-            link = f'https://neo.character.ai/{url}'
-        else:
-            link = f'{session.url}{url}'
-
-        if token == None:
-            key = session.token
-        else:
-            key = token
-
+    async def request(self, session: tls_client.Session, *, token: str = None, method: str = 'GET', data: dict = None, split: bool = False, neo: bool = False):
+        link = f'https://neo.character.ai/{self}' if neo else f'{session.url}{self}'
+        key = session.token if token is None else token
         headers = {
             'Authorization': f'Token {key}'
         }
@@ -65,11 +50,7 @@ class PyAsyncCAI:
                 link, headers=headers, json=data
             )
 
-        if split:
-            data = json.loads(response.text.split('\n')[-2])
-        else:
-            data = response.json()
-
+        data = json.loads(response.text.split('\n')[-2]) if split else response.json()
         if str(data).startswith("{'command': 'neo_error'"):
             raise errors.ServerError(data['comment'])
         elif str(data).startswith("{'detail': 'Auth"):
@@ -89,9 +70,7 @@ class PyAsyncCAI:
     @asynccontextmanager
     async def connect(self, token: str = None):
         try:
-            if token == None: key = self.token
-            else: key = token
-
+            key = self.token if token is None else token
             setattr(self.session, 'token', key)
 
             try:
@@ -101,7 +80,7 @@ class PyAsyncCAI:
                 )
             except websockets.exceptions.InvalidStatusCode:
                 raise errors.AuthError('Invalid token')
-            
+
             yield PyAsyncCAI.chat2(key, self.ws, self.session)
         finally:
             await self.ws.close()

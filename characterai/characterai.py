@@ -13,9 +13,7 @@ class PyCAI:
     ):
         self.token = token
 
-        if plus: sub = 'plus'
-        else: sub = 'beta'
-
+        sub = 'plus' if plus else 'beta'
         self.session = tls_client.Session(
             client_identifier='chrome112'
         )
@@ -28,22 +26,9 @@ class PyCAI:
         self.character = self.character(token, self.session)
         self.chat = self.chat(token, self.session)
 
-    def request(
-        url: str, session: tls_client.Session,
-        *, token: str = None, method: str = 'GET',
-        data: dict = None, split: bool = False,
-        neo: bool = False
-    ):
-        if neo:
-            link = f'https://neo.character.ai/{url}'
-        else:
-            link = f'{session.url}{url}'
-
-        if token == None:
-            key = session.token
-        else:
-            key = token
-
+    def request(self, session: tls_client.Session, *, token: str = None, method: str = 'GET', data: dict = None, split: bool = False, neo: bool = False):
+        link = f'https://neo.character.ai/{self}' if neo else f'{session.url}{self}'
+        key = session.token if token is None else token
         headers = {
             'Authorization': f'Token {key}'
         }
@@ -63,11 +48,7 @@ class PyCAI:
                 link, headers=headers, json=data
             )
 
-        if split:
-            data = json.loads(response.text.split('\n')[-2])
-        else:
-            data = response.json()
-
+        data = json.loads(response.text.split('\n')[-2]) if split else response.json()
         if str(data).startswith("{'command': 'neo_error'"):
             raise errors.ServerError(data['comment'])
         elif str(data).startswith("{'detail': 'Auth"):
